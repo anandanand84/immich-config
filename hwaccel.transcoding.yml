@@ -1,10 +1,7 @@
-# Configurations for hardware-accelerated transcoding
-
-# If using Unraid or another platform that doesn't allow multiple Compose files,
-# you can inline the config for a backend by copying its contents
-# into the immich-microservices service in the docker-compose.yml file.
-
-# See https://immich.app/docs/features/hardware-transcoding for more info on using hardware transcoding.
+# Hardware-accelerated transcoding — trimmed to the backends relevant for gpu-server.
+# The nvenc service is pinned by UUID to the RTX 4070 Ti SUPER — the GTX 750 Ti cannot be used
+# (driver 580 dropped 1st-gen Maxwell NVENC; onnxruntime CUDA needs SM >= 6.x). Beware VRAM contention with training jobs.
+# Note: the 750 Ti only supports H.264 NVENC (no HEVC encode, no HEVC decode).
 
 services:
   cpu: {}
@@ -15,40 +12,9 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              device_ids:
+                - GPU-2c1d6b33-427e-eb6d-5967-db230d92098f # RTX 4070 Ti SUPER (750 Ti unusable: SM 5.0 too old)
               capabilities:
                 - gpu
                 - compute
                 - video
-
-  quicksync:
-    devices:
-      - /dev/dri:/dev/dri
-
-  rkmpp:
-    security_opt: # enables full access to /sys and /proc, still far better than privileged: true
-      - systempaths=unconfined
-      - apparmor=unconfined
-    group_add:
-      - video
-    devices:
-      - /dev/rga:/dev/rga
-      - /dev/dri:/dev/dri
-      - /dev/dma_heap:/dev/dma_heap
-      - /dev/mpp_service:/dev/mpp_service
-      #- /dev/mali0:/dev/mali0 # only required to enable OpenCL-accelerated HDR -> SDR tonemapping
-    volumes:
-      #- /etc/OpenCL:/etc/OpenCL:ro # only required to enable OpenCL-accelerated HDR -> SDR tonemapping
-      #- /usr/lib/aarch64-linux-gnu/libmali.so.1:/usr/lib/aarch64-linux-gnu/libmali.so.1:ro # only required to enable OpenCL-accelerated HDR -> SDR tonemapping
-
-  vaapi:
-    devices:
-      - /dev/dri:/dev/dri
-
-  vaapi-wsl: # use this for VAAPI if you're running Immich in WSL2
-    devices:
-      - /dev/dri:/dev/dri
-    volumes:
-      - /usr/lib/wsl:/usr/lib/wsl
-    environment:
-      - LIBVA_DRIVER_NAME=d3d12
